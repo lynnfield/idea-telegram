@@ -19,7 +19,7 @@ import javax.swing.JTextField
 class Main : ToolWindowFactory {
 
     companion object {
-        val logger = Logger.getLogger("telegram-idea")
+        val logger: Logger = Logger.getLogger("com.tnl.idea.telegram")
 
         init {
             try {
@@ -58,82 +58,78 @@ class Main : ToolWindowFactory {
 
     private fun handleApiObject(apiObject: TdApi.Object) {
         logger.info("apiObject ${apiObject.constructor}")
-        when (apiObject.constructor) {
-            TdApi.UpdateAuthorizationState.CONSTRUCTOR -> {
-                val message = apiObject as TdApi.UpdateAuthorizationState
-                when (message.authorizationState.constructor) {
-                    TdApi.AuthorizationStateWaitTdlibParameters.CONSTRUCTOR -> {
-                        val params = TdApi.TdlibParameters().apply {
-                            databaseDirectory = "tdlib"
-                            useMessageDatabase = true
-                            useSecretChats = true
-                            apiId = BuildConfig.APP_ID
-                            apiHash = BuildConfig.API_HASH
-                            systemLanguageCode = Locale.getDefault().language
-                            deviceModel = "Desktop"
-                            systemVersion = "Unknown"
-                            applicationVersion = "0.1"
-                            enableStorageOptimizer = true
-                        }
-                        client.send(TdApi.SetTdlibParameters(params), ::handleResponse)
-                    }
-                    TdApi.AuthorizationStateWaitPhoneNumber.CONSTRUCTOR -> {
-                        replaceContent {
-                            row { label("waiting for phone") }
-                            val field = JTextField()
-                            row { field() }
-                            row {
-                                button("submit") {
-                                    client.send(TdApi.SetAuthenticationPhoneNumber(field.text, null), ::handleResponse)
-                                }
+
+        when (val tdApiObject = TdApiObject.parse(apiObject).also { logger.info(it.toString()) }) {
+            is TdApiObject.Update -> when (tdApiObject) {
+                is TdApiObject.Update.AuthorizationState -> when (tdApiObject.state) {
+                    TdApiObject.AuthorizationState.WaitTdlibParameters -> client.send(
+                        TdApi.SetTdlibParameters(
+                            TdApi.TdlibParameters().apply {
+                                databaseDirectory = "tdlib"
+                                useMessageDatabase = true
+                                useSecretChats = true
+                                apiId = BuildConfig.APP_ID
+                                apiHash = BuildConfig.API_HASH
+                                systemLanguageCode = Locale.getDefault().language
+                                deviceModel = "Desktop"
+                                systemVersion = "Unknown"
+                                applicationVersion = "0.1"
+                                enableStorageOptimizer = true
                             }
-                        }
-                    }
-                    TdApi.AuthorizationStateWaitCode.CONSTRUCTOR -> {
-                        replaceContent {
-                            row { label("waiting for code") }
-                            val field = JTextField()
-                            row { field() }
-                            row {
-                                button("submit") {
-                                    client.send(TdApi.CheckAuthenticationCode(field.text), ::handleResponse)
-                                }
-                            }
-                        }
-                    }
-                    TdApi.AuthorizationStateWaitEncryptionKey.CONSTRUCTOR -> {
-                        client.send(TdApi.CheckDatabaseEncryptionKey(), ::handleResponse)
-                    }
-                    TdApi.AuthorizationStateReady.CONSTRUCTOR -> {
-                        replaceContent {
-                            row { label("We are ready now!") }
-                        }
-                    }
-                    else -> logger.log(
-                        Level.INFO,
-                        "not implemented auth state ${message.authorizationState.constructor}"
+                        ),
+                        ::handleResponse
                     )
+                    TdApiObject.AuthorizationState.WaitPhoneNumber -> replaceContent {
+                        row { label("waiting for phone") }
+                        val field = JTextField()
+                        row { field() }
+                        row {
+                            button("submit") {
+                                client.send(TdApi.SetAuthenticationPhoneNumber(field.text, null), ::handleResponse)
+                            }
+                        }
+                    }
+                    is TdApiObject.AuthorizationState.WaitCode -> replaceContent {
+                        row { label("waiting for code") }
+                        val field = JTextField()
+                        row { field() }
+                        row {
+                            button("submit") {
+                                client.send(TdApi.CheckAuthenticationCode(field.text), ::handleResponse)
+                            }
+                        }
+                    }
+                    is TdApiObject.AuthorizationState.WaitEncryptionKey -> client.send(
+                        TdApi.CheckDatabaseEncryptionKey(),
+                        ::handleResponse
+                    )
+                    TdApiObject.AuthorizationState.Ready -> replaceContent {
+                        row { label("We are ready now!") }
+                    }
+                    is TdApiObject.AuthorizationState.Unknown -> logger.info(tdApiObject.state.toString())
                 }
+                else -> logger.info(tdApiObject.toString())
             }
-            else -> logger.info("not implemented apiObject ${apiObject.constructor}")
+            else -> logger.info(tdApiObject.toString())
         }
     }
 
     private fun replaceContent(build: LayoutBuilder.() -> Unit) {
         ApplicationManager.getApplication().invokeLater {
-            toolWindow.contentManager.findContent("main")?.component?.removeAll()
-            toolWindow.contentManager.findContent("main")?.component?.add(panel {
-                build()
-            })
-            toolWindow.contentManager.findContent("main")?.component?.validate()
+            toolWindow.contentManager.findContent("main")?.component?.apply {
+                removeAll()
+                add(panel { build() })
+                validate()
+            }
         }
     }
 
     private fun handleResponse(apiObject: TdApi.Object) {
-        when (apiObject.constructor) {
-            TdApi.Ok.CONSTRUCTOR -> logger.info("ok")
-            TdApi.Error.CONSTRUCTOR -> logger.info("err $apiObject")
-            else -> logger.info("wrong response ${apiObject.constructor}")
-        }
+        logger.info(
+            when (val tdApiObject = TdApiObject.parse(apiObject)) {
+                is TdApiObject.Ok, is TdApiObject.Error -> tdApiObject.toString()
+                else -> "unexpected response $tdApiObject"
+            }
+        )
     }
 }
