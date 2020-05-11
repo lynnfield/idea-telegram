@@ -37,11 +37,10 @@ class Main : ToolWindowFactory {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         this.toolWindow = toolWindow
-        val contentFactory = ContentFactory.SERVICE.getInstance()
         val panel = panel {
             row { label("hello") }
         }
-        val content = contentFactory.createContent(panel, "main", false)
+        val content = toolWindow.contentManager.factory.createContent(panel, "main", false)
         toolWindow.contentManager.addContent(content)
 
         logger.info("start")
@@ -80,7 +79,7 @@ class Main : ToolWindowFactory {
                         ),
                         ::handleResponse
                     )
-                    TdApiObject.AuthorizationState.WaitPhoneNumber -> replaceContent {
+                    TdApiObject.AuthorizationState.WaitPhoneNumber -> replaceContent("main") {
                         row { label("waiting for phone") }
                         val field = JTextField()
                         row { field() }
@@ -90,7 +89,7 @@ class Main : ToolWindowFactory {
                             }
                         }
                     }
-                    is TdApiObject.AuthorizationState.WaitCode -> replaceContent {
+                    is TdApiObject.AuthorizationState.WaitCode -> replaceContent("main") {
                         row { label("waiting for code") }
                         val field = JTextField()
                         row { field() }
@@ -105,7 +104,7 @@ class Main : ToolWindowFactory {
                         ::handleResponse
                     )
                     TdApiObject.AuthorizationState.Ready -> {
-                        replaceContent { row { label("loading chat list") } }
+                        replaceContent("main") { row { label("loading chat list") } }
                         client.send(TdApi.GetChats(TdApi.ChatListMain(), Long.MAX_VALUE, 0, 10)) {
                             when (val response = TdApiObject.parse(it)) {
                                 is TdApiObject.Chats -> logger.info(response.chatIds.joinToString())
@@ -119,9 +118,46 @@ class Main : ToolWindowFactory {
                     chats.add(tdApiObject.chat)
                     val currentSize = chats.size
                     replaceContent(
+                        name = "main",
                         build = {
                             chats.forEach { chat ->
-                                row { label(chat.title) }
+                                row {
+                                    button(chat.title) {
+                                        client.send(TdApi.GetChatHistory(chat.id, 0L, -1, 51, false)) {
+                                            when (val response = TdApiObject.parse(it)) {
+                                                is TdApiObject.Messages ->
+                                                    tab(chat.title) {
+                                                        response.messages.forEachIndexed { index, message ->
+                                                            when (val content = message.content) {
+                                                                null -> row { label("null content $index ${message.id}") }
+                                                                is TdApi.MessageText -> row { label(content.text.text) }
+                                                                else -> row { label("unknown content type $message") }
+                                                            }
+                                                        }
+
+                                                        client.send(TdApi.GetChatHistory(chat.id, response.messages.first().id, -1, 51, false)) {
+                                                            replaceContent(chat.title) {
+                                                                when (val response = TdApiObject.parse(it)) {
+                                                                    is TdApiObject.Messages ->
+                                                                        replaceContent(chat.title) {
+                                                                            response.messages.forEachIndexed { index, message ->
+                                                                                when (val content = message.content) {
+                                                                                    null -> row { label("null content $index ${message.id}") }
+                                                                                    is TdApi.MessageText -> row { label(content.text.text) }
+                                                                                    else -> row { label("unknown content type $message") }
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    else -> logger.info("unexpected GetChatHistory response: $response")
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                else -> logger.info("unexpected GetChatHistory response: $response")
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         },
                         predicate = {
@@ -129,15 +165,15 @@ class Main : ToolWindowFactory {
                         }
                     )
                 }
-                is TdApiObject.Update.Unknown -> logger.info(tdApiObject.toString())
+                else -> logger.info(tdApiObject.toString())
             }
             else -> logger.info(tdApiObject.toString())
         }
     }
 
-    private fun replaceContent(build: LayoutBuilder.() -> Unit) {
+    private fun replaceContent(name: String, build: LayoutBuilder.() -> Unit) {
         ApplicationManager.getApplication().invokeLater {
-            toolWindow.contentManager.findContent("main")?.component?.apply {
+            toolWindow.contentManager.findContent(name)?.component?.apply {
                 removeAll()
                 add(panel { build() })
                 validate()
@@ -145,10 +181,25 @@ class Main : ToolWindowFactory {
         }
     }
 
-    private fun replaceContent(build: LayoutBuilder.() -> Unit, predicate: () -> Boolean) {
+    private fun tab(name: String, build: LayoutBuilder.() -> Unit) {
+        ApplicationManager.getApplication().invokeLater {
+            val content =
+                toolWindow.contentManager.findContent(name) ?: toolWindow.contentManager.factory.createContent(
+                    panel { build() },
+                    name,
+                    false
+                ).apply {
+                    isCloseable = true
+                    toolWindow.contentManager.addContent(this)
+                }
+            toolWindow.contentManager.setSelectedContent(content, true)
+        }
+    }
+
+    private fun replaceContent(name: String, build: LayoutBuilder.() -> Unit, predicate: () -> Boolean) {
         ApplicationManager.getApplication().invokeLater(
             {
-                toolWindow.contentManager.findContent("main")?.component?.apply {
+                toolWindow.contentManager.findContent(name)?.component?.apply {
                     removeAll()
                     add(panel { build() })
                     validate()

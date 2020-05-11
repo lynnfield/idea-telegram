@@ -82,31 +82,19 @@ sealed class TdApiObject {
 
     data class Error(val code: Int, val message: String) : TdApiObject()
 
-    data class Chats(val chatIds: LongArray) : TdApiObject() {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
+    data class Chats(val chatIds: List<Long>) : TdApiObject()
 
-            other as Chats
-
-            if (!chatIds.contentEquals(other.chatIds)) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            return chatIds.contentHashCode()
-        }
-    }
+    data class Messages(val messages: List<TdApi.Message>) : TdApiObject()
 
     data class Unknown(val apiObject: TdApi.Object) : TdApiObject()
 
     companion object {
         fun parse(apiObject: TdApi.Object): TdApiObject = when (apiObject) {
             is TdApi.Update -> Update.parse(apiObject)
-            is TdApi.Chats -> Chats(apiObject.chatIds)
+            is TdApi.Chats -> Chats(apiObject.chatIds.toList())
             is TdApi.Ok -> Ok
             is TdApi.Error -> Error(apiObject.code, apiObject.message)
+            is TdApi.Messages -> Messages(apiObject.messages.toList())
             else -> Unknown(apiObject)
         }
     }
