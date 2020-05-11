@@ -5,12 +5,15 @@ import org.drinkless.tdlib.TdApi
 sealed class TdApiObject {
     sealed class Update : TdApiObject() {
         data class AuthorizationState(val state: TdApiObject.AuthorizationState) : Update()
+        data class NewChat(val chat: TdApi.Chat) : Update()
         data class Unknown(val apiObject: TdApi.Update) : Update()
 
         companion object {
             fun parse(apiObject: TdApi.Update): Update = when (apiObject) {
                 is TdApi.UpdateAuthorizationState -> AuthorizationState(
-                    TdApiObject.AuthorizationState.parse(apiObject.authorizationState))
+                    TdApiObject.AuthorizationState.parse(apiObject.authorizationState)
+                )
+                is TdApi.UpdateNewChat -> NewChat(apiObject.chat)
                 else -> Unknown(apiObject)
             }
         }
@@ -20,14 +23,17 @@ sealed class TdApiObject {
         object WaitTdlibParameters : AuthorizationState() {
             override fun toString(): String = this::class.qualifiedName.orEmpty()
         }
+
         object WaitPhoneNumber : AuthorizationState() {
             override fun toString(): String = this::class.qualifiedName.orEmpty()
         }
+
         data class WaitCode(val parse: AuthenticationCodeInfo) : AuthorizationState()
         data class WaitEncryptionKey(val encrypted: Boolean) : AuthorizationState()
         object Ready : AuthorizationState() {
             override fun toString(): String = this::class.qualifiedName.orEmpty()
         }
+
         data class Unknown(val apiObject: TdApi.AuthorizationState) : AuthorizationState()
 
         companion object {
@@ -73,13 +79,32 @@ sealed class TdApiObject {
     object Ok : TdApiObject() {
         override fun toString(): String = this::class.qualifiedName.orEmpty()
     }
+
     data class Error(val code: Int, val message: String) : TdApiObject()
+
+    data class Chats(val chatIds: LongArray) : TdApiObject() {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as Chats
+
+            if (!chatIds.contentEquals(other.chatIds)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            return chatIds.contentHashCode()
+        }
+    }
 
     data class Unknown(val apiObject: TdApi.Object) : TdApiObject()
 
     companion object {
         fun parse(apiObject: TdApi.Object): TdApiObject = when (apiObject) {
             is TdApi.Update -> Update.parse(apiObject)
+            is TdApi.Chats -> Chats(apiObject.chatIds)
             is TdApi.Ok -> Ok
             is TdApi.Error -> Error(apiObject.code, apiObject.message)
             else -> Unknown(apiObject)

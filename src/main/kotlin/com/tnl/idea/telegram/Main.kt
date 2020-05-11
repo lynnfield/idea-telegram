@@ -12,6 +12,7 @@ import org.drinkless.tdlib.Client
 import org.drinkless.tdlib.TdApi
 import java.io.File
 import java.util.*
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.logging.Level
 import java.util.logging.Logger
 import javax.swing.JTextField
@@ -32,6 +33,7 @@ class Main : ToolWindowFactory {
 
     private lateinit var client: Client
     private lateinit var toolWindow: ToolWindow
+    private val chats = CopyOnWriteArrayList<TdApi.Chat>()
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         this.toolWindow = toolWindow
@@ -65,7 +67,6 @@ class Main : ToolWindowFactory {
                     TdApiObject.AuthorizationState.WaitTdlibParameters -> client.send(
                         TdApi.SetTdlibParameters(
                             TdApi.TdlibParameters().apply {
-                                databaseDirectory = "tdlib"
                                 useMessageDatabase = true
                                 useSecretChats = true
                                 apiId = BuildConfig.APP_ID
@@ -103,12 +104,32 @@ class Main : ToolWindowFactory {
                         TdApi.CheckDatabaseEncryptionKey(),
                         ::handleResponse
                     )
-                    TdApiObject.AuthorizationState.Ready -> replaceContent {
-                        row { label("We are ready now!") }
+                    TdApiObject.AuthorizationState.Ready -> {
+                        replaceContent { row { label("loading chat list") } }
+                        client.send(TdApi.GetChats(TdApi.ChatListMain(), Long.MAX_VALUE, 0, 10)) {
+                            when (val response = TdApiObject.parse(it)) {
+                                is TdApiObject.Chats -> logger.info(response.chatIds.joinToString())
+                                else -> logger.info("unexpected GetChats response: $response")
+                            }
+                        }
                     }
                     is TdApiObject.AuthorizationState.Unknown -> logger.info(tdApiObject.state.toString())
                 }
-                else -> logger.info(tdApiObject.toString())
+                is TdApiObject.Update.NewChat -> {
+                    chats.add(tdApiObject.chat)
+                    val currentSize = chats.size
+                    replaceContent(
+                        build = {
+                            chats.forEach { chat ->
+                                row { label(chat.title) }
+                            }
+                        },
+                        predicate = {
+                            currentSize != chats.size
+                        }
+                    )
+                }
+                is TdApiObject.Update.Unknown -> logger.info(tdApiObject.toString())
             }
             else -> logger.info(tdApiObject.toString())
         }
@@ -122,6 +143,19 @@ class Main : ToolWindowFactory {
                 validate()
             }
         }
+    }
+
+    private fun replaceContent(build: LayoutBuilder.() -> Unit, predicate: () -> Boolean) {
+        ApplicationManager.getApplication().invokeLater(
+            {
+                toolWindow.contentManager.findContent("main")?.component?.apply {
+                    removeAll()
+                    add(panel { build() })
+                    validate()
+                }
+            },
+            { predicate() }
+        )
     }
 
     private fun handleResponse(apiObject: TdApi.Object) {
