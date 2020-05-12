@@ -4,7 +4,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
-import com.intellij.ui.content.ContentFactory
 import com.intellij.ui.layout.LayoutBuilder
 import com.intellij.ui.layout.panel
 import cz.adamh.utils.NativeUtils
@@ -37,9 +36,7 @@ class Main : ToolWindowFactory {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         this.toolWindow = toolWindow
-        val panel = panel {
-            row { label("hello") }
-        }
+        val panel = panel { row { label("hello") } }
         val content = toolWindow.contentManager.factory.createContent(panel, "main", false)
         toolWindow.contentManager.addContent(content)
 
@@ -127,31 +124,17 @@ class Main : ToolWindowFactory {
                                             when (val response = TdApiObject.parse(it)) {
                                                 is TdApiObject.Messages ->
                                                     tab(chat.title) {
+                                                        messageInput(chat, response)
+
                                                         response.messages.forEachIndexed { index, message ->
                                                             when (val content = message.content) {
                                                                 null -> row { label("null content $index ${message.id}") }
                                                                 is TdApi.MessageText -> row { label(content.text.text) }
-                                                                else -> row { label("unknown content type $message") }
+                                                                else -> row { label("unimplemented content type ${content.javaClass}") }
                                                             }
                                                         }
 
-                                                        client.send(TdApi.GetChatHistory(chat.id, response.messages.first().id, -1, 51, false)) {
-                                                            replaceContent(chat.title) {
-                                                                when (val response = TdApiObject.parse(it)) {
-                                                                    is TdApiObject.Messages ->
-                                                                        replaceContent(chat.title) {
-                                                                            response.messages.forEachIndexed { index, message ->
-                                                                                when (val content = message.content) {
-                                                                                    null -> row { label("null content $index ${message.id}") }
-                                                                                    is TdApi.MessageText -> row { label(content.text.text) }
-                                                                                    else -> row { label("unknown content type $message") }
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    else -> logger.info("unexpected GetChatHistory response: $response")
-                                                                }
-                                                            }
-                                                        }
+                                                        loadHistory(chat, response)
                                                     }
                                                 else -> logger.info("unexpected GetChatHistory response: $response")
                                             }
@@ -168,6 +151,57 @@ class Main : ToolWindowFactory {
                 else -> logger.info(tdApiObject.toString())
             }
             else -> logger.info(tdApiObject.toString())
+        }
+    }
+
+    private fun LayoutBuilder.messageInput(
+        chat: TdApi.Chat,
+        response: TdApiObject.Messages
+    ) {
+        row {
+            val textInput = JTextField()
+            textInput()
+            button("send") {
+                if (textInput.text.isNotBlank()) {
+                    client.send(
+                        TdApi.SendMessage(
+                            chat.id,
+                            0L,
+                            null,
+                            null,
+                            TdApi.InputMessageText(
+                                TdApi.FormattedText(
+                                    textInput.text,
+                                    emptyArray()
+                                ), true, true
+                            )
+                        ),
+                        { loadHistory(chat, response) }
+                    )
+                    textInput.text = ""
+                }
+            }
+        }
+    }
+
+    private fun loadHistory(chat: TdApi.Chat, response: TdApiObject.Messages) {
+        client.send(TdApi.GetChatHistory(chat.id, response.messages.first().id, -5, 55, false)) {
+            replaceContent(chat.title) {
+                when (val historyResponse = TdApiObject.parse(it)) {
+                    is TdApiObject.Messages ->
+                        replaceContent(chat.title) {
+                            messageInput(chat, response)
+                            historyResponse.messages.forEachIndexed { index, message ->
+                                when (val content = message.content) {
+                                    null -> row { label("null content $index ${message.id}") }
+                                    is TdApi.MessageText -> row { label(content.text.text) }
+                                    else -> row { label("unknown content type $index ${message.id} ${message.javaClass}") }
+                                }
+                            }
+                        }
+                    else -> logger.info("unexpected GetChatHistory response: $historyResponse")
+                }
+            }
         }
     }
 
