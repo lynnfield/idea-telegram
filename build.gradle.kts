@@ -10,12 +10,12 @@ plugins {
 
 val localProperties = loadProperties("local.properties")
 
-group = "com.tnl.idea.telegram"
-version = "1.0-SNAPSHOT"
+group = "com.genovich.idea.telegram"
+version = "0.1.1"
 
 buildConfig {
-    buildConfigField("int", "APP_ID", "${localProperties["com.tnl.idea.telegram.app_id"]}")
-    buildConfigField("String", "API_HASH", "${localProperties["com.tnl.idea.telegram.api_hash"]}")
+    buildConfigField("int", "APP_ID", "${localProperties["com.genovich.idea.telegram.app_id"]}")
+    buildConfigField("String", "API_HASH", "${localProperties["com.genovich.idea.telegram.api_hash"]}")
 }
 
 repositories {
@@ -45,11 +45,4 @@ tasks {
     compileTestKotlin {
         kotlinOptions.jvmTarget = "1.8"
     }
-}
-tasks.getByName<org.jetbrains.intellij.tasks.PatchPluginXmlTask>("patchPluginXml") {
-    changeNotes(
-        """
-      Add change notes here.<br>
-      <em>most HTML tags may be used</em>"""
-    )
 }

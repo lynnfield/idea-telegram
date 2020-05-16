@@ -1,4 +1,4 @@
-package com.genovich.idea.telegram.telegram
+package com.genovich.idea.telegram
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project

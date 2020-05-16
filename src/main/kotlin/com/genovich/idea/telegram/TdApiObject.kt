@@ -1,4 +1,4 @@
-package com.genovich.idea.telegram.telegram
+package com.genovich.idea.telegram
 
 import org.drinkless.tdlib.TdApi
 

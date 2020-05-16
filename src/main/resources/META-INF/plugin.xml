@@ -1,20 +1,24 @@
 <idea-plugin>
-    <id>org.example.idea-telegram</id>
-    <name>Plugin display name here</name>
-    <vendor email="support@yourcompany.com" url="http://www.yourcompany.com">YourCompany</vendor>
+    <id>com.genovich.idea.telegram</id>
+    <name>Telegram</name>
+    <vendor email="genovich.v.v@gmail.com" url="https://genovich.com/">Genovich</vendor>
 
     <description><![CDATA[
-    Enter short description for your plugin here.<br>
-    <em>most HTML tags may be used</em>
+        Client for Telegram messenger. You can use it right from your IDE.<br/>
+        No more need to launch two applications at the same time.<em/>
     ]]></description>
 
+    <change-notes><![CDATA[
+        First initial version.<br/>
+        It has SMS auth, list of chats, can open chat and send text messages.<em/>
+    ]]></change-notes>
     <!-- please see https://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
          on how to target different products -->
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- Add your extensions here -->
-        <toolWindow id="Main" factoryClass="com.genovich.idea.telegram.telegram.Main" anchor="right" secondary="true"/>
+        <toolWindow id="Main" factoryClass="com.genovich.idea.telegram.Main" anchor="right" secondary="true" os="mac"/>
     </extensions>
 
     <actions>
