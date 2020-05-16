@@ -1,4 +1,4 @@
-package com.tnl.idea.telegram
+package com.genovich.idea.telegram.telegram
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
@@ -57,7 +57,9 @@ class Main : ToolWindowFactory {
     private fun handleApiObject(apiObject: TdApi.Object) {
         logger.info("apiObject ${apiObject.constructor}")
 
-        when (val tdApiObject = TdApiObject.parse(apiObject).also { logger.info(it.toString()) }) {
+        when (val tdApiObject = TdApiObject.parse(
+            apiObject
+        ).also { logger.info(it.toString()) }) {
             is TdApiObject.Update -> when (tdApiObject) {
                 is TdApiObject.Update.AuthorizationState -> when (tdApiObject.state) {
                     TdApiObject.AuthorizationState.WaitTdlibParameters -> client.send(
@@ -103,7 +105,8 @@ class Main : ToolWindowFactory {
                     TdApiObject.AuthorizationState.Ready -> {
                         replaceContent("main") { row { label("loading chat list") } }
                         client.send(TdApi.GetChats(TdApi.ChatListMain(), Long.MAX_VALUE, 0, 10)) {
-                            when (val response = TdApiObject.parse(it)) {
+                            when (val response =
+                                TdApiObject.parse(it)) {
                                 is TdApiObject.Chats -> logger.info(response.chatIds.joinToString())
                                 else -> logger.info("unexpected GetChats response: $response")
                             }
@@ -121,7 +124,10 @@ class Main : ToolWindowFactory {
                                 row {
                                     button(chat.title) {
                                         client.send(TdApi.GetChatHistory(chat.id, 0L, -1, 51, false)) {
-                                            when (val response = TdApiObject.parse(it)) {
+                                            when (val response =
+                                                TdApiObject.parse(
+                                                    it
+                                                )) {
                                                 is TdApiObject.Messages ->
                                                     tab(chat.title) {
                                                         messageInput(chat, response)
@@ -187,7 +193,8 @@ class Main : ToolWindowFactory {
     private fun loadHistory(chat: TdApi.Chat, response: TdApiObject.Messages) {
         client.send(TdApi.GetChatHistory(chat.id, response.messages.first().id, -5, 55, false)) {
             replaceContent(chat.title) {
-                when (val historyResponse = TdApiObject.parse(it)) {
+                when (val historyResponse =
+                    TdApiObject.parse(it)) {
                     is TdApiObject.Messages ->
                         replaceContent(chat.title) {
                             messageInput(chat, response)
@@ -245,7 +252,8 @@ class Main : ToolWindowFactory {
 
     private fun handleResponse(apiObject: TdApi.Object) {
         logger.info(
-            when (val tdApiObject = TdApiObject.parse(apiObject)) {
+            when (val tdApiObject =
+                TdApiObject.parse(apiObject)) {
                 is TdApiObject.Ok, is TdApiObject.Error -> tdApiObject.toString()
                 else -> "unexpected response $tdApiObject"
             }

@@ -1,4 +1,4 @@
-package com.tnl.idea.telegram
+package com.genovich.idea.telegram.telegram
 
 import org.drinkless.tdlib.TdApi
 
@@ -11,9 +11,13 @@ sealed class TdApiObject {
         companion object {
             fun parse(apiObject: TdApi.Update): Update = when (apiObject) {
                 is TdApi.UpdateAuthorizationState -> AuthorizationState(
-                    TdApiObject.AuthorizationState.parse(apiObject.authorizationState)
+                    TdApiObject.AuthorizationState.parse(
+                        apiObject.authorizationState
+                    )
                 )
-                is TdApi.UpdateNewChat -> NewChat(apiObject.chat)
+                is TdApi.UpdateNewChat -> NewChat(
+                    apiObject.chat
+                )
                 else -> Unknown(apiObject)
             }
         }
@@ -40,10 +44,18 @@ sealed class TdApiObject {
             fun parse(apiObject: TdApi.AuthorizationState): AuthorizationState = when (apiObject) {
                 is TdApi.AuthorizationStateWaitTdlibParameters -> WaitTdlibParameters
                 is TdApi.AuthorizationStateWaitPhoneNumber -> WaitPhoneNumber
-                is TdApi.AuthorizationStateWaitCode -> WaitCode(AuthenticationCodeInfo.parse(apiObject.codeInfo))
-                is TdApi.AuthorizationStateWaitEncryptionKey -> WaitEncryptionKey(apiObject.isEncrypted)
+                is TdApi.AuthorizationStateWaitCode -> WaitCode(
+                    AuthenticationCodeInfo.parse(
+                        apiObject.codeInfo
+                    )
+                )
+                is TdApi.AuthorizationStateWaitEncryptionKey -> WaitEncryptionKey(
+                    apiObject.isEncrypted
+                )
                 is TdApi.AuthorizationStateReady -> Ready
-                else -> Unknown(apiObject)
+                else -> Unknown(
+                    apiObject
+                )
             }
         }
     }
@@ -54,8 +66,12 @@ sealed class TdApiObject {
 
         companion object {
             fun parse(apiObject: TdApi.AuthenticationCodeType): AuthenticationCodeType = when (apiObject) {
-                is TdApi.AuthenticationCodeTypeSms -> Sms(apiObject.length)
-                else -> Unknown(apiObject)
+                is TdApi.AuthenticationCodeTypeSms -> Sms(
+                    apiObject.length
+                )
+                else -> Unknown(
+                    apiObject
+                )
             }
         }
     }
@@ -67,12 +83,17 @@ sealed class TdApiObject {
         val timeout: Int
     ) : TdApiObject() {
         companion object {
-            fun parse(codeInfo: TdApi.AuthenticationCodeInfo): AuthenticationCodeInfo = AuthenticationCodeInfo(
-                codeInfo.phoneNumber.orEmpty(),
-                AuthenticationCodeType.parse(codeInfo.type),
-                AuthenticationCodeType.parse(codeInfo.nextType),
-                codeInfo.timeout
-            )
+            fun parse(codeInfo: TdApi.AuthenticationCodeInfo): AuthenticationCodeInfo =
+                AuthenticationCodeInfo(
+                    codeInfo.phoneNumber.orEmpty(),
+                    AuthenticationCodeType.parse(
+                        codeInfo.type
+                    ),
+                    AuthenticationCodeType.parse(
+                        codeInfo.nextType
+                    ),
+                    codeInfo.timeout
+                )
         }
     }
 
@@ -90,10 +111,15 @@ sealed class TdApiObject {
 
     companion object {
         fun parse(apiObject: TdApi.Object): TdApiObject = when (apiObject) {
-            is TdApi.Update -> Update.parse(apiObject)
+            is TdApi.Update -> Update.parse(
+                apiObject
+            )
             is TdApi.Chats -> Chats(apiObject.chatIds.toList())
             is TdApi.Ok -> Ok
-            is TdApi.Error -> Error(apiObject.code, apiObject.message)
+            is TdApi.Error -> Error(
+                apiObject.code,
+                apiObject.message
+            )
             is TdApi.Messages -> Messages(apiObject.messages.toList())
             else -> Unknown(apiObject)
         }

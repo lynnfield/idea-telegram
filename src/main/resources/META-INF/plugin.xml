@@ -14,7 +14,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- Add your extensions here -->
-        <toolWindow id="Main" factoryClass="com.tnl.idea.telegram.Main" anchor="right" secondary="true"/>
+        <toolWindow id="Main" factoryClass="com.genovich.idea.telegram.telegram.Main" anchor="right" secondary="true"/>
     </extensions>
 
     <actions>
