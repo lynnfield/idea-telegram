@@ -1,4 +1,4 @@
-package com.genovich.idea.telegram
+package com.genovich.idea.idegram
 
 import org.drinkless.tdlib.TdApi
 
@@ -10,11 +10,12 @@ sealed class TdApiObject {
 
         companion object {
             fun parse(apiObject: TdApi.Update): Update = when (apiObject) {
-                is TdApi.UpdateAuthorizationState -> AuthorizationState(
-                    TdApiObject.AuthorizationState.parse(
-                        apiObject.authorizationState
+                is TdApi.UpdateAuthorizationState ->
+                    AuthorizationState(
+                        TdApiObject.AuthorizationState.parse(
+                            apiObject.authorizationState
+                        )
                     )
-                )
                 is TdApi.UpdateNewChat -> NewChat(
                     apiObject.chat
                 )
@@ -38,24 +39,60 @@ sealed class TdApiObject {
             override fun toString(): String = this::class.qualifiedName.orEmpty()
         }
 
+        object Closed : AuthorizationState() {
+            override fun toString(): String = this::class.qualifiedName.orEmpty()
+        }
+
+        object Closing : AuthorizationState() {
+            override fun toString(): String = this::class.qualifiedName.orEmpty()
+        }
+
+        object LoggingOut : AuthorizationState() {
+            override fun toString(): String = this::class.qualifiedName.orEmpty()
+        }
+
+        data class WaitPassword(
+            val passwordHint: String,
+            val hasRecoveryEmailAddress: Boolean,
+            val recoveryEmailAddressPattern: String
+        ) : AuthorizationState()
+
+        data class WaitRegistration(val termsOfService: TdApi.TermsOfService) : AuthorizationState()
+
+        data class WaitOtherDeviceConfirmaiton(val link: String) : AuthorizationState()
+
         data class Unknown(val apiObject: TdApi.AuthorizationState) : AuthorizationState()
 
         companion object {
             fun parse(apiObject: TdApi.AuthorizationState): AuthorizationState = when (apiObject) {
                 is TdApi.AuthorizationStateWaitTdlibParameters -> WaitTdlibParameters
                 is TdApi.AuthorizationStateWaitPhoneNumber -> WaitPhoneNumber
-                is TdApi.AuthorizationStateWaitCode -> WaitCode(
-                    AuthenticationCodeInfo.parse(
-                        apiObject.codeInfo
+                is TdApi.AuthorizationStateWaitCode ->
+                    WaitCode(
+                        AuthenticationCodeInfo.parse(
+                            apiObject.codeInfo
+                        )
                     )
-                )
-                is TdApi.AuthorizationStateWaitEncryptionKey -> WaitEncryptionKey(
-                    apiObject.isEncrypted
-                )
+                is TdApi.AuthorizationStateWaitEncryptionKey ->
+                    WaitEncryptionKey(
+                        apiObject.isEncrypted
+                    )
                 is TdApi.AuthorizationStateReady -> Ready
-                else -> Unknown(
-                    apiObject
+                is TdApi.AuthorizationStateClosed -> Closed
+                is TdApi.AuthorizationStateClosing -> Closing
+                is TdApi.AuthorizationStateLoggingOut -> LoggingOut
+                is TdApi.AuthorizationStateWaitPassword -> WaitPassword(
+                    apiObject.passwordHint,
+                    apiObject.hasRecoveryEmailAddress,
+                    apiObject.recoveryEmailAddressPattern
                 )
+                is TdApi.AuthorizationStateWaitRegistration -> WaitRegistration(
+                    apiObject.termsOfService
+                )
+                is TdApi.AuthorizationStateWaitOtherDeviceConfirmation -> WaitOtherDeviceConfirmaiton(
+                    apiObject.link
+                )
+                else -> Unknown(apiObject)
             }
         }
     }

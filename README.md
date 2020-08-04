@@ -1,4 +1,4 @@
-# IDEA Telegram plugin
+# Idegram - IDEA Telegram plugin
 
 Now you can use Telegram messenger right from IntelliJ IDEA.
 

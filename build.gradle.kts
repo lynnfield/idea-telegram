@@ -10,12 +10,17 @@ plugins {
 
 val localProperties = loadProperties("local.properties")
 
-group = "com.genovich.idea.telegram"
+group = "com.genovich.idea.idegram"
 version = "0.1.1"
 
 buildConfig {
-    buildConfigField("int", "APP_ID", "${localProperties["com.genovich.idea.telegram.app_id"]}")
-    buildConfigField("String", "API_HASH", "${localProperties["com.genovich.idea.telegram.api_hash"]}")
+    buildConfigField("int", "APP_ID", "${localProperties["com.genovich.idea.idegram.app_id"]}")
+    buildConfigField("String", "API_HASH", "${localProperties["com.genovich.idea.idegram.api_hash"]}")
+}
+
+val publishPlugin by tasks.existing(org.jetbrains.intellij.tasks.PublishTask::class) {
+    channels("alpha")
+    token(localProperties["com.genovich.idea.idegram.publish_key"])
 }
 
 repositories {
@@ -34,8 +39,13 @@ intellij {
 }
 configure<JavaPluginConvention> {
     sourceCompatibility = JavaVersion.VERSION_1_8
-    sourceSets.getByName("main").java {
-        srcDir(File(buildDir, "gen/buildconfig/src/main"))
+
+    sourceSets {
+        main {
+            java {
+                srcDir(File(buildDir, "gen/buildconfig/src/main"))
+            }
+        }
     }
 }
 tasks {

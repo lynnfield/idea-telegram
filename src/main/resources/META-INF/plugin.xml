@@ -1,6 +1,6 @@
 <idea-plugin>
-    <id>com.genovich.idea.telegram</id>
-    <name>Telegram</name>
+    <id>com.genovich.idea.idegram</id>
+    <name>Idegram (MacOS Only)</name>
     <vendor email="genovich.v.v@gmail.com" url="https://genovich.com/">Genovich</vendor>
 
     <description><![CDATA[
@@ -18,7 +18,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- Add your extensions here -->
-        <toolWindow id="Main" factoryClass="com.genovich.idea.telegram.Main" anchor="right" secondary="true" os="mac"/>
+        <toolWindow id="Main" factoryClass="com.genovich.idea.idegram.Main" anchor="right" secondary="true" os="mac"/>
     </extensions>
 
     <actions>
